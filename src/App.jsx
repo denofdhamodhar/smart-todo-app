@@ -5,6 +5,7 @@ import { setSession, setLoading } from './store/slices/authSlice';
 import { processCarryForward, fetchDatesWithTasks } from './store/slices/todoSlice';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import OfflineSyncManager from './components/OfflineSyncManager';
 
 function App() {
   const dispatch = useDispatch();
@@ -44,6 +45,7 @@ function App() {
 
   return (
     <>
+      {session && <OfflineSyncManager />}
       {!session ? <Auth /> : <Dashboard />}
     </>
   );
