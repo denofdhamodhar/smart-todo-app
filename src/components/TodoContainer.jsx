@@ -4,8 +4,8 @@ import { fetchTodos, reorderTodos } from '../store/slices/todoSlice';
 import { format, isBefore, startOfDay } from 'date-fns';
 import TaskCard from './TaskCard';
 import TaskInput from './TaskInput';
-import { Printer, Filter } from 'lucide-react';
-import { AnimatePresence, Reorder } from 'framer-motion';
+import { Printer, Filter, Copy, Check } from 'lucide-react';
+import { AnimatePresence, Reorder, motion } from 'framer-motion';
 
 export default function TodoContainer({ selectedDate }) {
   const dispatch = useDispatch();
@@ -14,6 +14,9 @@ export default function TodoContainer({ selectedDate }) {
   const loading = useSelector(state => state.todos.loading);
   const printRef = useRef(null);
   const [filterPriority, setFilterPriority] = useState('Default');
+  const [copied, setCopied] = useState(false);
+
+  const [showToolsMenu, setShowToolsMenu] = useState(false);
 
   useEffect(() => {
     dispatch(fetchTodos(dateKey));
@@ -27,7 +30,88 @@ export default function TodoContainer({ selectedDate }) {
   const isPastDate = isBefore(startOfDay(selectedDate), startOfDay(new Date()));
 
   const handlePrint = () => {
-    window.print();
+    setShowToolsMenu(false);
+    setTimeout(() => window.print(), 100);
+  };
+
+  const handleCopy = async () => {
+    try {
+      let textToCopy = `Tasks for ${format(selectedDate, 'MMMM d, yyyy')}\n\n`;
+      if (activeTasks.length > 0) {
+        textToCopy += `Active Tasks:\n`;
+        activeTasks.forEach(t => {
+          textToCopy += `- ${t.title} (${t.priority} priority)\n`;
+          t.resources?.forEach(r => {
+            textToCopy += `  Link: ${r.url}\n`;
+          });
+        });
+        textToCopy += `\n`;
+      }
+      if (completedTasks.length > 0) {
+        textToCopy += `Completed Tasks:\n`;
+        completedTasks.forEach(t => {
+          textToCopy += `- ${t.title}\n`;
+        });
+      }
+      await navigator.clipboard.writeText(textToCopy.trim());
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setShowToolsMenu(false);
+      }, 1000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    let y = 20;
+    
+    doc.setFontSize(20);
+    doc.text(`Tasks for ${format(selectedDate, 'MMMM d, yyyy')}`, 20, y);
+    y += 15;
+
+    doc.setFontSize(14);
+    if (activeTasks.length > 0) {
+      doc.text('Active Tasks:', 20, y);
+      y += 10;
+      doc.setFontSize(12);
+      activeTasks.forEach(t => {
+        // check page bounds
+        if (y > 270) { doc.addPage(); y = 20; }
+        
+        doc.text(`- ${t.title} (${t.priority} Priority)`, 25, y);
+        y += 8;
+        t.resources?.forEach(r => {
+          if (y > 270) { doc.addPage(); y = 20; }
+          doc.setTextColor(0, 0, 255);
+          doc.textWithLink(r.url, 30, y, { url: r.url });
+          doc.setTextColor(0, 0, 0);
+          y += 8;
+        });
+      });
+      y += 5;
+    }
+
+    if (completedTasks.length > 0) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      doc.setFontSize(14);
+      doc.text('Completed Tasks:', 20, y);
+      y += 10;
+      doc.setFontSize(12);
+      completedTasks.forEach(t => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setTextColor(150, 150, 150);
+        doc.text(`- ${t.title}`, 25, y);
+        doc.setTextColor(0, 0, 0);
+        y += 8;
+      });
+    }
+
+    doc.save(`Tasks-${format(selectedDate, 'yyyy-MM-dd')}.pdf`);
+    setShowToolsMenu(false);
   };
 
   const handleReorder = (newOrder) => {
@@ -97,9 +181,6 @@ export default function TodoContainer({ selectedDate }) {
               <div className="mt-8 pt-6 border-t border-gray-200 border-dashed">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Completed</h3>
-                  <button onClick={handlePrint} className="text-gray-400 hover:text-gray-700 transition-colors p-2 bg-white rounded-lg shadow-sm border border-gray-100">
-                    <Printer className="w-4 h-4" />
-                  </button>
                 </div>
                 <div className="space-y-3 opacity-80">
                   <AnimatePresence>
@@ -120,8 +201,54 @@ export default function TodoContainer({ selectedDate }) {
         )}
       </div>
 
+      {/* Tools Menu (Floating) */}
+      <div className="fixed bottom-6 right-6 print:hidden z-50 flex flex-col items-end">
+        <AnimatePresence>
+          {showToolsMenu && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="mb-4 bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl p-2 w-48 flex flex-col gap-1 origin-bottom-right"
+            >
+              <button 
+                onClick={handleCopy} 
+                className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm text-gray-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors"
+              >
+                {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                <span className={copied ? "text-green-400 font-medium" : ""}>{copied ? 'Copied!' : 'Copy Tasks'}</span>
+              </button>
+              <button 
+                onClick={handlePrint} 
+                className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm text-gray-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Preview</span>
+              </button>
+              <div className="h-px bg-slate-800 my-1 mx-2" />
+              <button 
+                onClick={handleDownloadPDF} 
+                className="flex items-center gap-3 w-full text-left px-3 py-2.5 text-sm font-medium text-white bg-[#5B5FEF] hover:bg-indigo-500 rounded-xl transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Download PDF</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <button 
+          onClick={() => setShowToolsMenu(!showToolsMenu)} 
+          className="bg-slate-900 hover:bg-slate-800 text-white w-14 h-14 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center justify-center text-2xl"
+          title="Tools"
+        >
+          🛠️
+        </button>
+      </div>
+
       {/* Print View Only */}
-      <div className="hidden print-block p-8 bg-white max-w-2xl mx-auto" ref={printRef}>
+      <div className="absolute top-[-9999px] left-[-9999px] print:static print:top-auto print:left-auto p-8 bg-white max-w-2xl mx-auto w-full text-black" ref={printRef}>
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold mb-2">Work is Worship</h1>
           <h2 className="text-xl text-gray-600">Tasks for {format(selectedDate, 'MMMM d, yyyy')}</h2>
@@ -136,7 +263,11 @@ export default function TodoContainer({ selectedDate }) {
                   <span className="text-sm text-gray-500 ml-2">({t.priority} priority)</span>
                   {t.resources?.length > 0 && (
                     <ul className="list-circle pl-5 mt-1 text-sm text-blue-600">
-                      {t.resources.map(r => <li key={r.id}>{r.url}</li>)}
+                      {t.resources.map(r => (
+                        <li key={r.id}>
+                          <a href={r.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.url}</a>
+                        </li>
+                      ))}
                     </ul>
                   )}
                 </li>

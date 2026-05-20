@@ -14,7 +14,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen max-w-[1700px] mx-auto w-full bg-[#F8FAFC] overflow-hidden print:block print:h-auto print:bg-white">
+    <div className="flex h-screen max-w-425 mx-auto w-full bg-[#F8FAFC] overflow-hidden print:overflow-visible print:block print:h-auto print:bg-white">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block w-86 border-r border-gray-200 bg-white print:hidden">
         <div className="p-8">
@@ -38,8 +38,8 @@ export default function Dashboard() {
           <MobileDateSelector selectedDate={selectedDate} onSelect={setSelectedDate} />
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8 print:p-0 print:overflow-visible">
-          <div className="max-w-3xl mx-auto print:max-w-none">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 lg:px-12 print:p-0 print:overflow-visible">
+          <div className="max-w-[1200px] mx-auto print:max-w-none">
             <TodoContainer selectedDate={selectedDate} />
           </div>
         </div>
