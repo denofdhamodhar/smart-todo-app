@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
 import { useSelector } from 'react-redux';
 
 export default function SidebarCalendar({ selectedDate, onSelect }) {
@@ -22,15 +21,19 @@ export default function SidebarCalendar({ selectedDate, onSelect }) {
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
   return (
-    <div className="w-full select-none bg-violet-100 p-4 rounded-2xl mt-6">
+    <div className="w-full select-none bg-violet-50 dark:bg-white/10 p-4 rounded-2xl mt-6 border border-violet-100 dark:border-zinc-700/50">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-[1.1rem] font-semibold text-gray-800 tracking-tight">{format(currentMonth, 'MMMM yyyy')}</h2>
+        <h2 className="text-[1.1rem] font-semibold text-gray-800 dark:text-gray-100 tracking-tight">{format(currentMonth, 'MMMM yyyy')}</h2>
         <div className="flex space-x-1">
-          <button onClick={prevMonth} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"><ChevronLeft className="w-4 h-4 text-gray-600" /></button>
-          <button onClick={nextMonth} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors"><ChevronRight className="w-4 h-4 text-gray-600" /></button>
+          <button onClick={prevMonth} className="p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors">
+            <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+          </button>
+          <button onClick={nextMonth} className="p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors">
+            <ChevronRight className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+          </button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-y-4 gap-x-1 text-center text-xs font-medium mb-4 text-gray-400">
+      <div className="grid grid-cols-7 gap-y-4 gap-x-1 text-center text-xs font-medium mb-4 text-gray-400 dark:text-gray-500">
         {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => <div key={day}>{day}</div>)}
       </div>
       <div className="grid grid-cols-7 gap-y-2 gap-x-1 text-sm">
@@ -47,15 +50,15 @@ export default function SidebarCalendar({ selectedDate, onSelect }) {
               onClick={() => onSelect(day)}
               className={`relative w-8 h-8 mx-auto rounded-full flex items-center justify-center transition-all duration-200
                 ${isSelected
-                  ? 'bg-[#9D7CFF] text-white font-semibold shadow-md shadow-purple-200 scale-110'
+                  ? 'bg-[#9D7CFF] text-white font-semibold shadow-md shadow-purple-300/50 dark:shadow-purple-900/60 scale-110'
                   : isToday
-                    ? 'text-[#5B5FEF] font-bold bg-indigo-50 hover:bg-indigo-100'
-                    : 'text-gray-700 hover:bg-gray-100 hover:scale-110 font-medium'}
+                    ? 'text-[#5B5FEF] dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-zinc-700'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-zinc-700 hover:scale-110 font-medium'}
               `}
             >
               {format(day, 'd')}
               {hasTasks && (
-                <span className={`absolute top-0 right-0 w-[5px] h-[5px] rounded-full ${isSelected ? 'bg-white' : 'bg-[#4ADE80]'} ring-1 ring-white`}></span>
+                <span className={`absolute top-0 right-0 w-[5px] h-[5px] rounded-full ${isSelected ? 'bg-white' : 'bg-[#4ADE80]'} ring-1 ring-white dark:ring-[#111422]`}></span>
               )}
             </button>
           )

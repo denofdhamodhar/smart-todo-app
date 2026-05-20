@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { Provider } from 'react-redux'
 import { store } from './store'
+import { ThemeProvider } from './lib/ThemeContext'
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -38,9 +39,11 @@ class ErrorBoundary extends Component {
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <Provider store={store}>
-        <App />
-      </Provider>
+      <ThemeProvider>
+        <Provider store={store}>
+          <App />
+        </Provider>
+      </ThemeProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

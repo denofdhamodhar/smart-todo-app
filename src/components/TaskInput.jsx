@@ -33,13 +33,13 @@ export default function TaskInput({ selectedDate, disabled }) {
   if (disabled) return null;
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 focus-within:ring-2 focus-within:ring-[#5B5FEF] transition-all">
+    <form onSubmit={handleSubmit} className="bg-white dark:bg-[#232326] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-zinc-800 mb-6 focus-within:ring-2 focus-within:ring-[#5B5FEF] dark:focus-within:ring-indigo-500/60 transition-all">
       <input
         type="text"
         placeholder="What needs to be done?"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className="w-full text-lg placeholder-gray-400 font-medium border-none focus:outline-none bg-transparent mb-3"
+        className="w-full text-lg placeholder-gray-400 dark:placeholder-gray-600 font-medium border-none focus:outline-none bg-transparent mb-3 text-gray-900 dark:text-gray-100"
       />
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
@@ -50,8 +50,8 @@ export default function TaskInput({ selectedDate, disabled }) {
               onClick={() => setPriority(p)}
               className={`px-2.5 py-1.5 sm:px-3 rounded-xl text-xs font-medium transition-colors ${
                 priority === p 
-                  ? 'bg-gray-800 text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-gray-800 dark:bg-indigo-600 text-white' 
+                  : 'bg-gray-100 dark:bg-white/8 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/15'
               }`}
             >
               {p === 'High' && '⭐ '}

@@ -4,8 +4,9 @@ import { fetchTodos, reorderTodos } from '../store/slices/todoSlice';
 import { format, isBefore, startOfDay } from 'date-fns';
 import TaskCard from './TaskCard';
 import TaskInput from './TaskInput';
-import { Printer, Filter, Copy, Check } from 'lucide-react';
+import { Printer, Filter, Copy, Check, Moon, Sun } from 'lucide-react';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
+import { useTheme } from '../lib/ThemeContext';
 
 export default function TodoContainer({ selectedDate }) {
   const dispatch = useDispatch();
@@ -15,8 +16,8 @@ export default function TodoContainer({ selectedDate }) {
   const printRef = useRef(null);
   const [filterPriority, setFilterPriority] = useState('Default');
   const [copied, setCopied] = useState(false);
-
   const [showToolsMenu, setShowToolsMenu] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     dispatch(fetchTodos(dateKey));
@@ -26,7 +27,6 @@ export default function TodoContainer({ selectedDate }) {
   const activeTasks = displayedTodos.filter(t => !t.completed);
   const completedTasks = displayedTodos.filter(t => t.completed);
 
-  // Previous dates cannot be edited
   const isPastDate = isBefore(startOfDay(selectedDate), startOfDay(new Date()));
 
   const handlePrint = () => {
@@ -79,9 +79,7 @@ export default function TodoContainer({ selectedDate }) {
       y += 10;
       doc.setFontSize(12);
       activeTasks.forEach(t => {
-        // check page bounds
         if (y > 270) { doc.addPage(); y = 20; }
-        
         doc.text(`- ${t.title} (${t.priority} Priority)`, 25, y);
         y += 8;
         t.resources?.forEach(r => {
@@ -115,25 +113,23 @@ export default function TodoContainer({ selectedDate }) {
   };
 
   const handleReorder = (newOrder) => {
-    // Only allow reordering if not filtered
     if (filterPriority === 'Default') {
       dispatch(reorderTodos({ dateKey, newOrder }));
     }
   };
 
   const filters = [
-    { name: 'Default', label: 'All', activeClass: 'bg-slate-800 text-white', inactiveClass: 'bg-slate-100 text-slate-600 hover:bg-slate-200' },
-    { name: 'High', label: 'High', activeClass: 'bg-orange-500 text-white', inactiveClass: 'bg-orange-50 text-orange-600 hover:bg-orange-100' },
-    { name: 'Medium', label: 'Medium', activeClass: 'bg-yellow-500 text-white', inactiveClass: 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100' },
-    { name: 'Low', label: 'Low', activeClass: 'bg-green-500 text-white', inactiveClass: 'bg-green-50 text-green-600 hover:bg-green-100' }
+    { name: 'Default', label: 'All', activeClass: 'bg-slate-800 dark:bg-indigo-600 text-white', inactiveClass: 'bg-slate-100 dark:bg-white/8 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/15' },
+    { name: 'High', label: 'High', activeClass: 'bg-orange-500 text-white', inactiveClass: 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/50' },
+    { name: 'Medium', label: 'Medium', activeClass: 'bg-yellow-500 text-white', inactiveClass: 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50' },
+    { name: 'Low', label: 'Low', activeClass: 'bg-green-500 text-white', inactiveClass: 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/50' }
   ];
 
   return (
     <div className="w-full relative pb-24">
-      {/* Hide this container during print via CSS classes */}
       <div className="print-hide">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 mt-10">
-          <h2 className="text-xl font-semibold text-gray-800">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
             {isPastDate ? 'Tasks for ' : 'Today, '}{format(selectedDate, 'MMM d')}
           </h2>
 
@@ -178,9 +174,9 @@ export default function TodoContainer({ selectedDate }) {
             )}
 
             {completedTasks.length > 0 && (
-              <div className="mt-8 pt-6 border-t border-gray-200 border-dashed">
+              <div className="mt-8 pt-6 border-t border-dashed border-gray-200 dark:border-white/10">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Completed</h3>
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-500 uppercase tracking-wider">Completed</h3>
                 </div>
                 <div className="space-y-3 opacity-80">
                   <AnimatePresence>
@@ -194,15 +190,17 @@ export default function TodoContainer({ selectedDate }) {
 
             {!loading && todos.length === 0 && !isPastDate && (
               <div className="text-center py-12">
-                <p className="text-gray-400">No tasks for this date. Enjoy your day!</p>
+                <p className="text-gray-400 dark:text-gray-600">No tasks for this date. Enjoy your day!</p>
               </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Tools Menu (Floating) */}
-      <div className="fixed bottom-6 right-6 print:hidden z-50 flex flex-col items-end">
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-6 right-6 print:hidden z-50 flex flex-col items-end gap-3">
+        
+        {/* Tools Menu Card */}
         <AnimatePresence>
           {showToolsMenu && (
             <motion.div 
@@ -210,7 +208,7 @@ export default function TodoContainer({ selectedDate }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="mb-4 bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl p-2 w-48 flex flex-col gap-1 origin-bottom-right"
+              className="mb-1 bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl p-2 w-48 flex flex-col gap-1 origin-bottom-right"
             >
               <button 
                 onClick={handleCopy} 
@@ -238,13 +236,54 @@ export default function TodoContainer({ selectedDate }) {
           )}
         </AnimatePresence>
 
-        <button 
-          onClick={() => setShowToolsMenu(!showToolsMenu)} 
-          className="bg-slate-900 hover:bg-slate-800 text-white w-14 h-14 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center justify-center text-2xl"
-          title="Tools"
-        >
-          🛠️
-        </button>
+        {/* Button Row */}
+        <div className="flex items-center gap-3">
+          {/* Dark/Light Mode Toggle */}
+          <motion.button
+            onClick={toggleTheme}
+            whileTap={{ scale: 0.9 }}
+            className="relative bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-yellow-300 w-12 h-12 rounded-full shadow-sm flex items-center justify-center overflow-hidden"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              {theme === 'dark' ? (
+                <motion.div
+                  key="sun"
+                  initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="absolute"
+                >
+                  <Sun className="w-5 h-5 text-yellow-400" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="moon"
+                  initial={{ rotate: 90, opacity: 0, scale: 0.5 }}
+                  animate={{ rotate: 0, opacity: 1, scale: 1 }}
+                  exit={{ rotate: -90, opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="absolute"
+                >
+                  <Moon className="w-5 h-5 text-slate-600" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.button>
+
+          {/* Tools Button */}
+          <motion.button 
+            onClick={() => setShowToolsMenu(!showToolsMenu)} 
+            whileTap={{ scale: 0.9 }}
+            animate={{ rotate: showToolsMenu ? 15 : 0 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            className="bg-[#232326] dark:bg-zinc-800 hover:bg-zinc-700 dark:hover:bg-zinc-700 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-2xl border border-zinc-700/50 dark:border-zinc-700"
+            title="Tools"
+          >
+            🛠️
+          </motion.button>
+        </div>
       </div>
 
       {/* Print View Only */}
