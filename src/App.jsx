@@ -21,6 +21,10 @@ function App() {
         dispatch(processCarryForward());
         dispatch(fetchDatesWithTasks());
       }
+    }).catch(err => {
+      console.warn("Offline or getSession error:", err);
+      // Let onAuthStateChange handle the fallback or just finish loading
+      dispatch(setLoading(false));
     });
 
     // Listen for changes

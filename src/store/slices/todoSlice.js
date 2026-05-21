@@ -73,6 +73,7 @@ export const addTodo = createAsyncThunk(
       user_id: userId,
       order_index: orderIndex,
       completed: false,
+      carried_forward: false,
       created_at: new Date().toISOString(),
       resources: []
     };
@@ -184,21 +185,100 @@ export const processCarryForward = createAsyncThunk(
     const today = format(new Date(), 'yyyy-MM-dd');
     let count = 0;
     
+    console.log("[processCarryForward] Starting. Today is:", today);
+    console.log("[processCarryForward] Current itemsByDate keys:", Object.keys(state.todos.itemsByDate));
+
+    // Get existing tasks for today to calculate start order_index for copies
+    const todayItems = state.todos.itemsByDate[today] || [];
+    let nextOrderIndex = todayItems.length > 0 ? Math.max(...todayItems.map(t => t.order_index || 0)) + 1 : 0;
+    
     Object.keys(state.todos.itemsByDate).forEach(date => {
+      console.log(`[processCarryForward] Checking date: ${date}`);
       if (date < today) {
         state.todos.itemsByDate[date].forEach(task => {
-          if (!task.completed) {
-            dispatch(todoSlice.actions.deleteOptimistic({ id: task.id }));
-            dispatch(todoSlice.actions.addOptimistic({ 
-              dateKey: today, 
-              todo: { ...task, date_key: today, priority: 'High', carried_forward: true } 
+          console.log(`[processCarryForward] Checking task ${task.id}: completed=${task.completed}, carried_forward=${task.carried_forward}`);
+          if (!task.completed && !task.carried_forward) {
+            console.log(`[processCarryForward] CARRYING FORWARD task: ${task.id}`);
+            // 1. Mark original task as carried_forward = true (so it doesn't get processed again)
+            dispatch(todoSlice.actions.updateOptimistic({ 
+              dateKey: date, 
+              id: task.id, 
+              updates: { carried_forward: true } 
             }));
             dispatch(todoSlice.actions.addToQueue({
               type: 'UPDATE',
               table: 'todos',
               id: task.id,
-              payload: { date_key: today, priority: 'High', carried_forward: true }
+              payload: { carried_forward: true }
             }));
+
+            // 2. Format the original date to show in the copy's title (DD-MM-YYYY)
+            const parts = date.split('-');
+            const formattedOldDate = parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : date;
+
+            // Strip any existing carry-forward markers from the title
+            const cleanTitle = task.title
+              .replace(/\s\(from\s\d{2}-\d{2}-\d{4}\)$/, '')
+              .replace(/\s\[from:\d{2}-\d{2}-\d{4}\]$/, '');
+
+            // 3. Create copied task with a new UUID and today's date
+            const newTaskId = uuidv4();
+            const copiedResources = [];
+            if (task.resources && task.resources.length > 0) {
+              task.resources.forEach(r => {
+                copiedResources.push({
+                  id: uuidv4(),
+                  task_id: newTaskId,
+                  url: r.url
+                });
+              });
+            }
+
+            const copiedTask = {
+              id: newTaskId,
+              user_id: task.user_id,
+              date_key: today,
+              title: `${cleanTitle} [from:${formattedOldDate}]`,
+              completed: false,
+              priority: task.priority,
+              carried_forward: false, // Can be carried forward tomorrow if incomplete today
+              order_index: nextOrderIndex++,
+              created_at: new Date().toISOString(),
+              resources: copiedResources
+            };
+
+            // 4. Add the copy optimistically to local Redux state
+            dispatch(todoSlice.actions.addOptimistic({ 
+              dateKey: today, 
+              todo: copiedTask 
+            }));
+
+            // 5. Queue INSERT for the copied task in the syncQueue
+            dispatch(todoSlice.actions.addToQueue({
+              type: 'INSERT',
+              table: 'todos',
+              payload: {
+                id: copiedTask.id,
+                user_id: copiedTask.user_id,
+                date_key: copiedTask.date_key,
+                title: copiedTask.title,
+                completed: copiedTask.completed,
+                priority: copiedTask.priority,
+                carried_forward: copiedTask.carried_forward,
+                order_index: copiedTask.order_index,
+                created_at: copiedTask.created_at
+              }
+            }));
+
+            // 6. Queue INSERTs for all copied resources
+            copiedResources.forEach(res => {
+              dispatch(todoSlice.actions.addToQueue({
+                type: 'INSERT',
+                table: 'resources',
+                payload: res
+              }));
+            });
+
             count++;
           }
         });
@@ -315,3 +395,18 @@ const todoSlice = createSlice({
 
 export const { addToQueue, addOptimistic, updateOptimistic, deleteOptimistic, reorderOptimistic, addResourceOptimistic, deleteResourceOptimistic } = todoSlice.actions;
 export default todoSlice.reducer;
+
+export const parseTaskTitle = (title) => {
+  if (!title) return { cleanTitle: '', fromOriginalDate: null };
+  const match = title.match(/\s\[from:(\d{2}-\d{2}-\d{4})\]$/);
+  if (match) {
+    return {
+      cleanTitle: title.replace(/\s\[from:\d{2}-\d{2}-\d{4}\]$/, ''),
+      fromOriginalDate: match[1]
+    };
+  }
+  return {
+    cleanTitle: title,
+    fromOriginalDate: null
+  };
+};

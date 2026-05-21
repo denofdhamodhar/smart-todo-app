@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchTodos, reorderTodos } from '../store/slices/todoSlice';
+import { fetchTodos, reorderTodos, parseTaskTitle } from '../store/slices/todoSlice';
 import { format, isBefore, startOfDay } from 'date-fns';
 import TaskCard from './TaskCard';
 import TaskInput from './TaskInput';
@@ -40,7 +40,8 @@ export default function TodoContainer({ selectedDate }) {
       if (activeTasks.length > 0) {
         textToCopy += `Active Tasks:\n`;
         activeTasks.forEach(t => {
-          textToCopy += `- ${t.title} (${t.priority} priority)\n`;
+          const { cleanTitle } = parseTaskTitle(t.title);
+          textToCopy += `- ${cleanTitle} (${t.priority} priority)\n`;
           t.resources?.forEach(r => {
             textToCopy += `  Link: ${r.url}\n`;
           });
@@ -50,7 +51,8 @@ export default function TodoContainer({ selectedDate }) {
       if (completedTasks.length > 0) {
         textToCopy += `Completed Tasks:\n`;
         completedTasks.forEach(t => {
-          textToCopy += `- ${t.title}\n`;
+          const { cleanTitle } = parseTaskTitle(t.title);
+          textToCopy += `- ${cleanTitle}\n`;
         });
       }
       await navigator.clipboard.writeText(textToCopy.trim());
@@ -80,7 +82,8 @@ export default function TodoContainer({ selectedDate }) {
       doc.setFontSize(12);
       activeTasks.forEach(t => {
         if (y > 270) { doc.addPage(); y = 20; }
-        doc.text(`- ${t.title} (${t.priority} Priority)`, 25, y);
+        const { cleanTitle } = parseTaskTitle(t.title);
+        doc.text(`- ${cleanTitle} (${t.priority} Priority)`, 25, y);
         y += 8;
         t.resources?.forEach(r => {
           if (y > 270) { doc.addPage(); y = 20; }
@@ -102,7 +105,8 @@ export default function TodoContainer({ selectedDate }) {
       completedTasks.forEach(t => {
         if (y > 270) { doc.addPage(); y = 20; }
         doc.setTextColor(150, 150, 150);
-        doc.text(`- ${t.title}`, 25, y);
+        const { cleanTitle } = parseTaskTitle(t.title);
+        doc.text(`- ${cleanTitle}`, 25, y);
         doc.setTextColor(0, 0, 0);
         y += 8;
       });
@@ -126,7 +130,7 @@ export default function TodoContainer({ selectedDate }) {
   ];
 
   return (
-    <div className="w-full relative pb-24">
+    <div className="w-full relative pb-24 print:pb-0 print:!bg-white">
       <div className="print-hide">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 mt-10">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
@@ -155,22 +159,24 @@ export default function TodoContainer({ selectedDate }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {filterPriority === 'Default' ? (
+            {filterPriority === 'Default' && !isPastDate ? (
               <Reorder.Group axis="y" values={activeTasks} onReorder={handleReorder} className="space-y-3 list-none">
                 <AnimatePresence>
                   {activeTasks.map(task => (
                     <Reorder.Item key={task.id} value={task} id={task.id} className="relative z-0">
-                      <TaskCard task={task} />
+                      <TaskCard task={task} disabled={isPastDate} />
                     </Reorder.Item>
                   ))}
                 </AnimatePresence>
               </Reorder.Group>
             ) : (
-              <AnimatePresence>
-                {activeTasks.map(task => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </AnimatePresence>
+              <div className="space-y-3">
+                <AnimatePresence>
+                  {activeTasks.map(task => (
+                    <TaskCard key={task.id} task={task} disabled={isPastDate} />
+                  ))}
+                </AnimatePresence>
+              </div>
             )}
 
             {completedTasks.length > 0 && (
@@ -181,7 +187,7 @@ export default function TodoContainer({ selectedDate }) {
                 <div className="space-y-3 opacity-80">
                   <AnimatePresence>
                     {completedTasks.map(task => (
-                      <TaskCard key={task.id} task={task} />
+                      <TaskCard key={task.id} task={task} disabled={isPastDate} />
                     ))}
                   </AnimatePresence>
                 </div>
@@ -242,7 +248,7 @@ export default function TodoContainer({ selectedDate }) {
           <motion.button
             onClick={toggleTheme}
             whileTap={{ scale: 0.9 }}
-            className="relative bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-gray-700 dark:text-yellow-300 w-12 h-12 rounded-full shadow-sm flex items-center justify-center overflow-hidden"
+            className="relative bg-white dark:bg-zinc-800 border border-purple-400 dark:border-zinc-700 text-gray-700 dark:text-yellow-300 w-14 h-14 rounded-full shadow-sm flex items-center justify-center overflow-hidden"
             title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
             <AnimatePresence mode="wait" initial={false}>
@@ -266,7 +272,7 @@ export default function TodoContainer({ selectedDate }) {
                   transition={{ duration: 0.25, ease: 'easeOut' }}
                   className="absolute"
                 >
-                  <Moon className="w-5 h-5 text-slate-600" />
+                  <Moon fill='currentColor' className="w-5.5 h-5.5 text-purple-400" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -287,42 +293,48 @@ export default function TodoContainer({ selectedDate }) {
       </div>
 
       {/* Print View Only */}
-      <div className="absolute top-[-9999px] left-[-9999px] print:static print:top-auto print:left-auto p-8 bg-white max-w-2xl mx-auto w-full text-black" ref={printRef}>
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold mb-2">Work is Worship</h1>
-          <h2 className="text-xl text-gray-600">Tasks for {format(selectedDate, 'MMMM d, yyyy')}</h2>
-        </div>
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold border-b pb-2 mb-4 text-gray-800">Active Tasks</h2>
-          {activeTasks.length === 0 ? <p className="text-gray-500 italic">No active tasks.</p> : (
-            <ul className="list-disc pl-5 space-y-3">
-              {activeTasks.map(t => (
-                <li key={t.id} className="text-gray-900">
-                  <span className="font-medium text-[15px]">{t.title}</span>
-                  <span className="text-sm text-gray-500 ml-2">({t.priority} priority)</span>
-                  {t.resources?.length > 0 && (
-                    <ul className="list-circle pl-5 mt-1 text-sm text-blue-600">
-                      {t.resources.map(r => (
-                        <li key={r.id}>
-                          <a href={r.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.url}</a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold border-b pb-2 mb-4 text-gray-800">Completed Tasks</h2>
-          {completedTasks.length === 0 ? <p className="text-gray-500 italic">No completed tasks.</p> : (
-            <ul className="list-disc pl-5 space-y-2 text-gray-400">
-              {completedTasks.map(t => (
-                <li key={t.id} className="line-through">{t.title}</li>
-              ))}
-            </ul>
-          )}
+      <div className="absolute top-[-9999px] left-[-9999px] print:static print:top-auto print:left-auto p-8 print:p-0 bg-white print:w-full print:max-w-none text-black" ref={printRef}>
+        <div className="max-w-2xl mx-auto px-12 pt-16">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold mb-2 text-purple-600">Work is Worship</h1>
+            <h2 className="text-xl text-slate-600">Tasks for {format(selectedDate, 'MMMM d, yyyy')}</h2>
+          </div>
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold pb-2 mb-4 text-orange-500">Active Tasks</h2>
+            {activeTasks.length === 0 ? <p className="text-gray-500 italic">No active tasks.</p> : (
+              <ul className="list-disc pl-5 space-y-3">
+                {activeTasks.map(t => {
+                  const { cleanTitle } = parseTaskTitle(t.title);
+                  return (
+                    <li key={t.id} className="text-gray-900">
+                      <span className="font-medium text-[15px]">{cleanTitle}</span>
+                      <span className="text-sm text-gray-500 ml-2">({t.priority} priority)</span>
+                      {t.resources?.length > 0 && (
+                        <ul className="list-circle pl-5 mt-1 text-sm text-blue-600">
+                          {t.resources.map(r => (
+                            <li key={r.id}>
+                              <a href={r.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.url}</a>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold pb-2 mb-4 text-green-500">Completed Tasks</h2>
+            {completedTasks.length === 0 ? <p className="text-gray-500 italic">No completed tasks.</p> : (
+              <ul className="list-disc pl-5 space-y-2 text-gray-400">
+                {completedTasks.map(t => {
+                  const { cleanTitle } = parseTaskTitle(t.title);
+                  return <li key={t.id} className="line-through">{cleanTitle}</li>;
+                })}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -12,7 +12,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen max-w-425 mx-auto w-full bg-[#F8FAFC] dark:bg-[#141417] overflow-hidden print:overflow-visible print:block print:h-auto print:bg-white transition-colors duration-300">
+    <div className="flex h-screen max-w-425 mx-auto w-full bg-[#F8FAFC] dark:bg-[#141417] overflow-hidden print:overflow-visible print:block print:h-auto print:!bg-white transition-colors duration-300">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block w-86 border-r border-gray-200 dark:border-zinc-800 bg-white dark:bg-[#1c1c1f] print:hidden">
         <div className="p-8">
