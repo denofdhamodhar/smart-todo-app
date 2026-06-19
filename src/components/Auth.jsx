@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Mail, Lock, Loader2, Moon, Sun } from 'lucide-react';
+import { Mail, Lock, Loader2, Moon, Sun, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '../lib/ThemeContext';
 
@@ -9,6 +9,7 @@ export default function Auth() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
   const handleAuth = async (e) => {
@@ -98,13 +99,30 @@ export default function Auth() {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-zinc-500" />
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5B5FEF] dark:focus:ring-indigo-500 focus:border-transparent transition-all bg-white dark:bg-zinc-800/60 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-zinc-600 text-sm"
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#5B5FEF] dark:focus:ring-indigo-500 focus:border-transparent transition-all bg-white dark:bg-zinc-800/60 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-zinc-600 text-sm"
               placeholder="Password"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors focus:outline-none flex items-center justify-center"
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={showPassword ? "eye-off" : "eye"}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  {showPassword ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
+                </motion.div>
+              </AnimatePresence>
+            </button>
           </div>
 
           <button

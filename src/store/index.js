@@ -18,12 +18,15 @@ const encodeState = (stateObj) => {
 // Helper to decode state from Base64
 const decodeState = (encodedStr) => {
   try {
+    if (!encodedStr || encodedStr.trim().startsWith('{')) {
+      return null; // Old plain JSON format, skip atob
+    }
     const binString = atob(encodedStr);
     const bytes = Uint8Array.from(binString, (char) => char.charCodeAt(0));
     const jsonStr = new TextDecoder().decode(bytes);
     return JSON.parse(jsonStr);
   } catch (e) {
-    console.error("Failed to decode state", e);
+    // Silent fallback for formatting changes
     return null;
   }
 };
