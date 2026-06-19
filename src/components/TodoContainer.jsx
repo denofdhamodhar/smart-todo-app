@@ -56,6 +56,9 @@ export default function TodoContainer({ selectedDate }) {
         completedTasks.forEach(t => {
           const { cleanTitle } = parseTaskTitle(t.title);
           textToCopy += `- ${cleanTitle}\n`;
+          t.resources?.forEach(r => {
+            textToCopy += `  Link: ${r.url}\n`;
+          });
         });
       }
       await navigator.clipboard.writeText(textToCopy.trim());
@@ -385,48 +388,128 @@ export default function TodoContainer({ selectedDate }) {
       </div>
 
       {/* Print View Only */}
-      <div className="absolute top-[-9999px] left-[-9999px] print:static print:top-auto print:left-auto p-8 print:p-0 bg-white print:w-full print:max-w-none text-black" ref={printRef}>
-        <div className="max-w-2xl mx-auto px-12 pt-16">
-          <div className="text-center mb-10">
-            <h1 className="text-3xl font-bold mb-2 text-purple-600">Work is Worship</h1>
-            <h2 className="text-xl text-slate-600">Tasks for {format(selectedDate, 'MMMM d, yyyy')}</h2>
+      <div className="absolute top-[-9999px] left-[-9999px] print:static print:top-auto print:left-auto p-8 print:p-0 bg-white print:w-full print:max-w-none text-slate-800" ref={printRef}>
+        <div className="max-w-3xl mx-auto px-6 py-10 bg-white">
+          {/* Header Banner Accent Line */}
+          <div className="h-[2px] bg-[#5B5FEF] w-full mb-6"></div>
+
+          {/* Header Title Grid */}
+          <div className="flex justify-between items-baseline mb-8">
+            <h1 className="text-2xl font-bold text-slate-800">Smart Todo Planner</h1>
+            <span className="text-xs font-medium text-slate-500">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</span>
           </div>
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold pb-2 mb-4 text-orange-500">Active Tasks</h2>
-            {printActiveTasks.length === 0 ? <p className="text-gray-500 italic">No active tasks.</p> : (
-              <ul className="list-disc pl-5 space-y-3">
+
+          {/* Active Tasks Section */}
+          {printActiveTasks.length > 0 && (
+            <div className="mb-10">
+              <div className="mb-4">
+                <h2 className="text-base font-bold text-[#5B5FEF] tracking-wide">Active Tasks</h2>
+                <div className="h-[0.5px] bg-[#5B5FEF] w-full mt-1.5"></div>
+              </div>
+              <div className="space-y-4">
                 {printActiveTasks.map(t => {
                   const { cleanTitle } = parseTaskTitle(t.title);
+                  
+                  // Priority border and badge text color
+                  let pBorderColor = "border-l-[#22C55E]"; // Low
+                  let pTextColor = "text-[#22C55E]";
+                  if (t.priority === 'High') {
+                    pBorderColor = "border-l-[#F97316]";
+                    pTextColor = "text-[#F97316]";
+                  } else if (t.priority === 'Medium') {
+                    pBorderColor = "border-l-[#EAB308]";
+                    pTextColor = "text-[#EAB308]";
+                  }
+
                   return (
-                    <li key={t.id} className="text-gray-900">
-                      <span className="font-medium text-[15px]">{cleanTitle}</span>
-                      <span className="text-sm text-gray-500 ml-2">({t.priority} priority)</span>
+                    <div key={t.id} className={`bg-slate-50 border border-slate-200 border-l-4 ${pBorderColor} rounded-r-lg p-4 flex flex-col gap-2`}>
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-sm text-slate-800 leading-snug">{cleanTitle}</span>
+                        <span className={`text-[9px] font-extrabold tracking-wider ${pTextColor} uppercase select-none`}>{t.priority}</span>
+                      </div>
                       {t.resources?.length > 0 && (
-                        <ul className="list-circle pl-5 mt-1 text-sm text-blue-600">
-                          {t.resources.map(r => (
-                            <li key={r.id}>
-                              <a href={r.url} className="text-blue-600 underline" target="_blank" rel="noopener noreferrer">{r.url}</a>
-                            </li>
-                          ))}
-                        </ul>
+                        <div className="mt-1 pt-1 border-t border-slate-100">
+                          <span className="text-[10px] font-semibold text-slate-500 block mb-1">Links:</span>
+                          <div className="flex flex-col gap-1 pl-2">
+                            {t.resources.map(r => (
+                              <a
+                                key={r.id}
+                                href={r.url}
+                                className="text-xs text-blue-500 hover:underline break-all"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {r.url.length > 85 ? r.url.substring(0, 82) + '...' : r.url}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    </li>
+                    </div>
                   );
                 })}
-              </ul>
-            )}
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold pb-2 mb-4 text-green-500">Completed Tasks</h2>
-            {printCompletedTasks.length === 0 ? <p className="text-gray-500 italic">No completed tasks.</p> : (
-              <ul className="list-disc pl-5 space-y-2 text-gray-400">
+              </div>
+            </div>
+          )}
+
+          {/* Completed Tasks Section */}
+          {printCompletedTasks.length > 0 && (
+            <div>
+              <div className="mb-4">
+                <h2 className="text-base font-bold text-[#22C55E] tracking-wide">Completed Tasks</h2>
+                <div className="h-[0.5px] bg-[#22C55E] w-full mt-1.5"></div>
+              </div>
+              <div className="space-y-4">
                 {printCompletedTasks.map(t => {
                   const { cleanTitle } = parseTaskTitle(t.title);
-                  return <li key={t.id} className="line-through">{cleanTitle}</li>;
+                  
+                  // Priority border and badge text color
+                  let pBorderColor = "border-l-[#22C55E]"; // Low
+                  let pTextColor = "text-[#22C55E]";
+                  if (t.priority === 'High') {
+                    pBorderColor = "border-l-[#F97316]";
+                    pTextColor = "text-[#F97316]";
+                  } else if (t.priority === 'Medium') {
+                    pBorderColor = "border-l-[#EAB308]";
+                    pTextColor = "text-[#EAB308]";
+                  }
+
+                  return (
+                    <div key={t.id} className={`bg-slate-50 border border-slate-200 border-l-4 ${pBorderColor} rounded-r-lg p-4 flex flex-col gap-2 opacity-75`}>
+                      <div className="flex justify-between items-start">
+                        <span className="font-bold text-sm text-slate-800 line-through leading-snug">{cleanTitle}</span>
+                        <span className={`text-[9px] font-extrabold tracking-wider ${pTextColor} uppercase select-none`}>{t.priority}</span>
+                      </div>
+                      {t.resources?.length > 0 && (
+                        <div className="mt-1 pt-1 border-t border-slate-100">
+                          <span className="text-[10px] font-semibold text-slate-500 block mb-1">Links:</span>
+                          <div className="flex flex-col gap-1 pl-2">
+                            {t.resources.map(r => (
+                              <a
+                                key={r.id}
+                                href={r.url}
+                                className="text-xs text-blue-500 hover:underline break-all"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {r.url.length > 85 ? r.url.substring(0, 82) + '...' : r.url}
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
                 })}
-              </ul>
-            )}
-          </div>
+              </div>
+            </div>
+          )}
+
+          {printActiveTasks.length === 0 && printCompletedTasks.length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-sm italic text-slate-400">No tasks scheduled for this date.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
