@@ -27,6 +27,9 @@ export default function TodoContainer({ selectedDate }) {
   const activeTasks = displayedTodos.filter(t => !t.completed);
   const completedTasks = displayedTodos.filter(t => t.completed);
 
+  const printActiveTasks = activeTasks.filter(t => !parseTaskTitle(t.title).fromOriginalDate);
+  const printCompletedTasks = completedTasks.filter(t => !parseTaskTitle(t.title).fromOriginalDate);
+
   const isPastDate = isBefore(startOfDay(selectedDate), startOfDay(new Date()));
 
   const handlePrint = () => {
@@ -69,47 +72,136 @@ export default function TodoContainer({ selectedDate }) {
   const handleDownloadPDF = async () => {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
-    let y = 20;
     
-    doc.setFontSize(20);
-    doc.text(`Tasks for ${format(selectedDate, 'MMMM d, yyyy')}`, 20, y);
-    y += 15;
+    // Filter out tasks from other dates (carried-forward)
+    const localDateTasks = todos.filter(t => !parseTaskTitle(t.title).fromOriginalDate);
+    const displayedPDFTodos = filterPriority === 'Default' ? localDateTasks : localDateTasks.filter(t => t.priority === filterPriority);
+    
+    const active = displayedPDFTodos.filter(t => !t.completed);
+    const completed = displayedPDFTodos.filter(t => t.completed);
 
-    doc.setFontSize(14);
-    if (activeTasks.length > 0) {
-      doc.text('Active Tasks:', 20, y);
-      y += 10;
-      doc.setFontSize(12);
-      activeTasks.forEach(t => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        const { cleanTitle } = parseTaskTitle(t.title);
-        doc.text(`- ${cleanTitle} (${t.priority} Priority)`, 25, y);
-        y += 8;
-        t.resources?.forEach(r => {
-          if (y > 270) { doc.addPage(); y = 20; }
-          doc.setTextColor(0, 0, 255);
-          doc.textWithLink(r.url, 30, y, { url: r.url });
-          doc.setTextColor(0, 0, 0);
-          y += 8;
+    let y = 20;
+    const margin = 20;
+    const pageWidth = doc.internal.pageSize.width;
+    const contentWidth = pageWidth - (margin * 2);
+
+    // Title / Header Banner
+    doc.setFillColor(91, 95, 239); // Royal blue/purple accent
+    doc.rect(margin, y, contentWidth, 2, 'F');
+    y += 10;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.text("Smart Todo Planner", margin, y);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text(format(selectedDate, 'EEEE, MMMM d, yyyy'), margin + 105, y);
+    y += 12;
+
+    // Helper to draw section header
+    const drawSectionHeader = (titleText, color) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(color[0], color[1], color[2]);
+      doc.text(titleText, margin, y);
+      y += 6;
+      doc.setDrawColor(color[0], color[1], color[2]);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, margin + contentWidth, y);
+      y += 8;
+    };
+
+    // Helper to draw a task card
+    const drawTaskCard = (task) => {
+      const cardX = margin;
+      const cardWidth = contentWidth;
+      const leftBorderWidth = 4;
+      
+      // Determine priority color
+      let pColor = [34, 197, 94]; // Low (Green)
+      if (task.priority === 'High') pColor = [249, 115, 22]; // Orange
+      else if (task.priority === 'Medium') pColor = [234, 179, 8]; // Yellow
+
+      // Prepare text
+      const cleanTitle = parseTaskTitle(task.title).cleanTitle;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      
+      const titleLines = doc.splitTextToSize(cleanTitle, cardWidth - 30);
+      const titleHeight = titleLines.length * 5;
+      
+      // Links
+      const links = task.resources || [];
+      const linkHeight = links.length * 6;
+
+      const cardPadding = 6;
+      const cardHeight = titleHeight + linkHeight + (links.length > 0 ? 12 : 8);
+
+      // Page overflow check
+      if (y + cardHeight > 275) {
+        doc.addPage();
+        y = 20;
+      }
+
+      // Draw light gray background card
+      doc.setFillColor(248, 250, 252); // slate-50
+      doc.rect(cardX, y, cardWidth, cardHeight, 'F');
+
+      // Draw priority colored left border
+      doc.setFillColor(pColor[0], pColor[1], pColor[2]);
+      doc.rect(cardX, y, leftBorderWidth, cardHeight, 'F');
+
+      // Draw card border
+      doc.setDrawColor(226, 232, 240); // slate-200
+      doc.setLineWidth(0.2);
+      doc.rect(cardX, y, cardWidth, cardHeight, 'S');
+
+      // Print Title
+      doc.setTextColor(30, 41, 59);
+      doc.text(titleLines, cardX + 8, y + 6);
+
+      // Print Priority Badge Text
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(pColor[0], pColor[1], pColor[2]);
+      doc.text(task.priority.toUpperCase(), cardX + cardWidth - 25, y + 6, { align: 'right' });
+
+      // Print Links
+      if (links.length > 0) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Links:", cardX + 8, y + titleHeight + 8);
+        
+        links.forEach((link, idx) => {
+          doc.setTextColor(59, 130, 246); // Blue link color
+          const shortUrl = link.url.length > 75 ? link.url.substring(0, 72) + '...' : link.url;
+          doc.textWithLink(shortUrl, cardX + 18, y + titleHeight + 14 + (idx * 6), { url: link.url });
         });
-      });
-      y += 5;
+      }
+
+      y += cardHeight + 4;
+    };
+
+    if (active.length > 0) {
+      drawSectionHeader("Active Tasks", [91, 95, 239]);
+      active.forEach(t => drawTaskCard(t));
+      y += 6;
     }
 
-    if (completedTasks.length > 0) {
-      if (y > 250) { doc.addPage(); y = 20; }
-      doc.setFontSize(14);
-      doc.text('Completed Tasks:', 20, y);
-      y += 10;
+    if (completed.length > 0) {
+      drawSectionHeader("Completed Tasks", [34, 197, 94]);
+      completed.forEach(t => drawTaskCard(t));
+    }
+
+    if (active.length === 0 && completed.length === 0) {
+      doc.setFont("helvetica", "italic");
       doc.setFontSize(12);
-      completedTasks.forEach(t => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.setTextColor(150, 150, 150);
-        const { cleanTitle } = parseTaskTitle(t.title);
-        doc.text(`- ${cleanTitle}`, 25, y);
-        doc.setTextColor(0, 0, 0);
-        y += 8;
-      });
+      doc.setTextColor(148, 163, 184);
+      doc.text("No tasks scheduled for this date.", margin, y + 10);
     }
 
     doc.save(`Tasks-${format(selectedDate, 'yyyy-MM-dd')}.pdf`);
@@ -301,9 +393,9 @@ export default function TodoContainer({ selectedDate }) {
           </div>
           <div className="mb-8">
             <h2 className="text-lg font-semibold pb-2 mb-4 text-orange-500">Active Tasks</h2>
-            {activeTasks.length === 0 ? <p className="text-gray-500 italic">No active tasks.</p> : (
+            {printActiveTasks.length === 0 ? <p className="text-gray-500 italic">No active tasks.</p> : (
               <ul className="list-disc pl-5 space-y-3">
-                {activeTasks.map(t => {
+                {printActiveTasks.map(t => {
                   const { cleanTitle } = parseTaskTitle(t.title);
                   return (
                     <li key={t.id} className="text-gray-900">
@@ -326,9 +418,9 @@ export default function TodoContainer({ selectedDate }) {
           </div>
           <div>
             <h2 className="text-lg font-semibold pb-2 mb-4 text-green-500">Completed Tasks</h2>
-            {completedTasks.length === 0 ? <p className="text-gray-500 italic">No completed tasks.</p> : (
+            {printCompletedTasks.length === 0 ? <p className="text-gray-500 italic">No completed tasks.</p> : (
               <ul className="list-disc pl-5 space-y-2 text-gray-400">
-                {completedTasks.map(t => {
+                {printCompletedTasks.map(t => {
                   const { cleanTitle } = parseTaskTitle(t.title);
                   return <li key={t.id} className="line-through">{cleanTitle}</li>;
                 })}

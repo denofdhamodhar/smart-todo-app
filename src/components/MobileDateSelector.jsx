@@ -24,7 +24,7 @@ export default function MobileDateSelector({ selectedDate, onSelect }) {
   return (
     <div 
       ref={scrollRef}
-      className="flex overflow-x-auto hide-scrollbar space-x-3 pb-2 -mx-4 px-4 scroll-smooth"
+      className="flex overflow-x-auto hide-scrollbar space-x-3 pb-3 -mx-4 px-4 scroll-smooth"
       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }} // Hide scrollbar
     >
       <style dangerouslySetInnerHTML={{__html: `
@@ -41,19 +41,19 @@ export default function MobileDateSelector({ selectedDate, onSelect }) {
             key={day.toString()}
             onClick={() => onSelect(day)}
             data-selected={isSelected}
-            className={`relative flex flex-col items-center justify-center min-w-[4rem] h-16 rounded-2xl transition-all duration-200
+            className={`relative flex flex-col items-center justify-center min-w-[4.2rem] h-18 rounded-2xl transition-all duration-200 border
               ${isSelected 
-                ? 'bg-[#9D7CFF] text-white shadow-lg shadow-purple-200 transform scale-105' 
-                : 'bg-transparent text-gray-500 hover:bg-gray-50'}
+                ? 'bg-gradient-to-br from-[#9D7CFF] to-[#7C3AED] text-white border-transparent shadow-lg shadow-purple-500/20 transform scale-105 z-10' 
+                : 'bg-white dark:bg-zinc-800/60 border-slate-100 dark:border-zinc-700/50 hover:bg-slate-50 dark:hover:bg-zinc-700/80 hover:scale-102'}
             `}
           >
             {hasTasks && (
-              <span className={`absolute top-2 right-3 w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-[#4ADE80]'}`}></span>
+              <span className={`absolute top-2.5 right-3 w-2 h-2 rounded-full ${isSelected ? 'bg-white ring-2 ring-[#9D7CFF]' : 'bg-[#4ADE80] ring-2 ring-white dark:ring-zinc-800'}`}></span>
             )}
-            <span className={`text-[10px] uppercase tracking-wider font-semibold mb-1 ${isSelected ? 'text-purple-100' : ''}`}>
+            <span className={`text-[9px] uppercase tracking-widest font-extrabold mb-1.5 ${isSelected ? 'text-purple-100' : 'text-[#7C3AED] dark:text-indigo-400'}`}>
               {format(day, 'EEE')}
             </span>
-            <span className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900'}`}>
+            <span className={`text-lg font-black ${isSelected ? 'text-white' : 'text-slate-800 dark:text-zinc-100'}`}>
               {format(day, 'd')}
             </span>
           </button>
