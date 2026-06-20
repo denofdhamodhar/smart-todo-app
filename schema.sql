@@ -10,7 +10,8 @@ create table todos (
   completed boolean default false,
   priority text check (priority in ('High', 'Medium', 'Low')) default 'Medium',
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  carried_forward boolean default false
+  carried_forward boolean default false,
+  note text
 );
 
 -- Create resources table

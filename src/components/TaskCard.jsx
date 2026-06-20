@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { updateTodo, deleteTodo, addResource, deleteResource, parseTaskTitle } from '../store/slices/todoSlice';
-import { Check, Link as LinkIcon, ChevronDown, ChevronUp, Trash2, Edit2, Plus, X, GripVertical, CornerUpRight } from 'lucide-react';
+import { Check, Link as LinkIcon, ChevronDown, ChevronUp, Trash2, Edit2, Plus, X, GripVertical, CornerUpRight, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Select,
@@ -42,6 +42,8 @@ export default function TaskCard({ task, disabled }) {
   const [editTitle, setEditTitle] = useState(cleanTitle);
   const [newResourceUrl, setNewResourceUrl] = useState('');
   const [showAddResource, setShowAddResource] = useState(false);
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [noteText, setNoteText] = useState(task.note || '');
 
   const toggleComplete = () => {
     if (disabled) return;
@@ -86,6 +88,29 @@ export default function TaskCard({ task, disabled }) {
   const handleRemoveResource = (resourceId) => {
     if (disabled) return;
     dispatch(deleteResource(resourceId));
+  };
+
+  const handleToggleEditNote = () => {
+    if (disabled) return;
+    if (!isEditingNote) {
+      setNoteText(task.note || '');
+    }
+    setIsEditingNote(!isEditingNote);
+  };
+
+  const handleSaveNote = () => {
+    if (disabled) return;
+    dispatch(updateTodo({ id: task.id, updates: { note: noteText.trim() || null } }));
+    setIsEditingNote(false);
+  };
+
+  const handleDeleteNote = () => {
+    if (disabled) return;
+    if (window.confirm("Are you sure you want to delete this note?")) {
+      dispatch(updateTodo({ id: task.id, updates: { note: null } }));
+      setNoteText('');
+      setIsEditingNote(false);
+    }
   };
 
   return (
@@ -194,6 +219,9 @@ export default function TaskCard({ task, disabled }) {
                 <button onClick={() => setShowAddResource(true)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#5B5FEF] hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg" title="Add Link">
                   <LinkIcon className="w-4 h-4" />
                 </button>
+                <button onClick={handleToggleEditNote} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#e4a834] dark:hover:text-[#ffd60a] hover:bg-amber-50 dark:hover:bg-amber-950/20 rounded-lg" title="Add/Edit Note">
+                  <FileText className="w-4 h-4" />
+                </button>
                 <button onClick={handleToggleEdit} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-[#5B5FEF] hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg" title="Edit Task">
                   <Edit2 className="w-4 h-4" />
                 </button>
@@ -252,6 +280,84 @@ export default function TaskCard({ task, disabled }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Note Section */}
+      {(task.note || !disabled || isEditingNote) && (
+        <div className="mt-3 pl-9 border-t border-dashed border-slate-200 dark:border-zinc-700/80 pt-3">
+          {(task.note || isEditingNote) && (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-zinc-400 mb-2.5 select-none">
+              <FileText className="w-3.5 h-3.5 text-amber-400 dark:text-purple-400" />
+              <span className='text-amber-400 dark:text-purple-400'>Note:</span>
+              {isEditingNote && <span className="text-[10px] text-amber-600 dark:text-yellow-500 font-normal">(Editing)</span>}
+            </div>
+          )}
+          {isEditingNote ? (
+            <div className="space-y-2">
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                className="w-full text-sm p-3 border border-gray-200 dark:border-zinc-700/60 rounded-xl focus:outline-none focus:border-[#e4a834] dark:focus:border-[#ffd60a] focus:ring-1 focus:ring-[#e4a834] dark:focus:ring-[#ffd60a] bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-zinc-600"
+                placeholder="Write your notes here... (unlimited characters)"
+                rows={3}
+                autoFocus
+              />
+              <div className="flex justify-end gap-2">
+                <button 
+                  onClick={handleSaveNote} 
+                  className="text-xs bg-[#e4a834] hover:bg-[#d59929] active:bg-[#c68b1f] text-white px-3 py-1.5 rounded-lg font-medium transition-colors shadow-sm"
+                >
+                  Save Note
+                </button>
+                <button 
+                  onClick={() => { setIsEditingNote(false); setNoteText(task.note || ''); }} 
+                  className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2.5 py-1.5 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {task.note ? (
+                <div className="group/note bg-slate-50/50 dark:bg-zinc-800/30 border border-slate-200/30 dark:border-zinc-700/60 rounded-xl p-3 relative">
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-[#fde047] leading-relaxed whitespace-pre-wrap pr-14">
+                    {task.note}
+                  </p>
+                  
+                  {!disabled && (
+                    <div className="absolute right-2.5 top-2.5 flex items-center gap-1 opacity-100 lg:opacity-0 group-hover/note:opacity-100 transition-opacity">
+                      <button 
+                        onClick={handleToggleEditNote}
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-[#e4a834] dark:hover:text-[#ffd60a] hover:bg-white dark:hover:bg-zinc-800 rounded-md transition-all border border-transparent hover:border-gray-100 dark:hover:border-zinc-700" 
+                        title="Edit Note"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button 
+                        onClick={handleDeleteNote}
+                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-white dark:hover:bg-zinc-800 rounded-md transition-all border border-transparent hover:border-gray-100 dark:hover:border-zinc-700" 
+                        title="Delete Note"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                !disabled && (
+                  <button 
+                    onClick={handleToggleEditNote} 
+                    className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-[#e4a834] dark:hover:text-[#ffd60a] transition-colors font-medium"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Note</span>
+                  </button>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }

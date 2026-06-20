@@ -243,7 +243,8 @@ export const processCarryForward = createAsyncThunk(
           carried_forward: false, // Can be carried forward tomorrow if incomplete today
           order_index: nextOrderIndex++,
           created_at: new Date().toISOString(),
-          resources: copiedResources
+          resources: copiedResources,
+          note: task.note // Copy the note!
         };
 
         // 4. Add the copy optimistically to local Redux state
@@ -265,7 +266,8 @@ export const processCarryForward = createAsyncThunk(
             priority: copiedTask.priority,
             carried_forward: copiedTask.carried_forward,
             order_index: copiedTask.order_index,
-            created_at: copiedTask.created_at
+            created_at: copiedTask.created_at,
+            note: copiedTask.note // Include note in sync queue
           }
         }));
 

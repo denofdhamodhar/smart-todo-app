@@ -67,6 +67,9 @@ export default function TodoContainer({ selectedDate }) {
           t.resources?.forEach(r => {
             textToCopy += `  Link: ${r.url}\n`;
           });
+          if (t.note) {
+            textToCopy += `  Note: ${t.note}\n`;
+          }
         });
         textToCopy += `\n`;
       }
@@ -78,6 +81,9 @@ export default function TodoContainer({ selectedDate }) {
           t.resources?.forEach(r => {
             textToCopy += `  Link: ${r.url}\n`;
           });
+          if (t.note) {
+            textToCopy += `  Note: ${t.note}\n`;
+          }
         });
       }
       await navigator.clipboard.writeText(textToCopy.trim());
@@ -157,8 +163,19 @@ export default function TodoContainer({ selectedDate }) {
       const links = task.resources || [];
       const linkHeight = links.length * 6;
 
+      // Note
+      const note = task.note ? cleanTextForPDF(task.note) : "";
+      let noteLines = [];
+      if (note) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9);
+        noteLines = doc.splitTextToSize(`Note: ${note}`, cardWidth - 25);
+      }
+
       const cardPadding = 6;
-      const cardHeight = titleHeight + linkHeight + (links.length > 0 ? 12 : 8);
+      const baseHeight = titleHeight + linkHeight + (links.length > 0 ? 12 : 8);
+      const noteHeight = note ? (noteLines.length * 5 + 6) : 0;
+      const cardHeight = baseHeight + noteHeight;
 
       // Page overflow check
       if (y + cardHeight > 275) {
@@ -201,6 +218,21 @@ export default function TodoContainer({ selectedDate }) {
           const shortUrl = link.url.length > 75 ? link.url.substring(0, 72) + '...' : link.url;
           doc.textWithLink(shortUrl, cardX + 18, y + titleHeight + 14 + (idx * 6), { url: link.url });
         });
+      }
+
+      // Print Note
+      if (note) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139); // slate-500
+        const noteY = y + titleHeight + (links.length > 0 ? linkHeight + 12 : 8);
+        
+        // Draw a light grey vertical indicator line
+        doc.setDrawColor(203, 213, 225); // slate-300
+        doc.setLineWidth(0.5);
+        doc.line(cardX + 8, noteY + 1, cardX + 8, noteY + 1 + (noteLines.length * 5));
+        
+        doc.text(noteLines, cardX + 12, noteY + 4);
       }
 
       y += cardHeight + 4;
@@ -462,6 +494,11 @@ export default function TodoContainer({ selectedDate }) {
                           </div>
                         </div>
                       )}
+                      {t.note && (
+                        <div className="mt-1.5 text-xs italic text-slate-500 border-l-2 border-slate-300 pl-2 whitespace-pre-wrap">
+                          Note: {t.note}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -513,6 +550,11 @@ export default function TodoContainer({ selectedDate }) {
                               </a>
                             ))}
                           </div>
+                        </div>
+                      )}
+                      {t.note && (
+                        <div className="mt-1.5 text-xs italic text-slate-500 border-l-2 border-slate-300 pl-2 whitespace-pre-wrap">
+                          Note: {t.note}
                         </div>
                       )}
                     </div>
