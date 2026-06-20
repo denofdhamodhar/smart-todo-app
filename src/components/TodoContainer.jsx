@@ -8,6 +8,25 @@ import { Printer, Filter, Copy, Check, Moon, Sun } from 'lucide-react';
 import { AnimatePresence, Reorder, motion } from 'framer-motion';
 import { useTheme } from '../lib/ThemeContext';
 
+const cleanTextForPDF = (text) => {
+  if (!text) return "";
+  try {
+    return text
+      .replace(/\p{Emoji_Presentation}/gu, "")
+      .replace(/\p{Extended_Pictographic}/gu, "")
+      .replace(/\p{Emoji}/gu, "")
+      .replace(/[\u2600-\u27BF]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  } catch (e) {
+    return text
+      .replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, '')
+      .replace(/[\u2600-\u27BF]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+};
+
 export default function TodoContainer({ selectedDate }) {
   const dispatch = useDispatch();
   const dateKey = format(selectedDate, 'yyyy-MM-dd');
@@ -27,8 +46,8 @@ export default function TodoContainer({ selectedDate }) {
   const activeTasks = displayedTodos.filter(t => !t.completed);
   const completedTasks = displayedTodos.filter(t => t.completed);
 
-  const printActiveTasks = activeTasks.filter(t => !parseTaskTitle(t.title).fromOriginalDate);
-  const printCompletedTasks = completedTasks.filter(t => !parseTaskTitle(t.title).fromOriginalDate);
+  const printActiveTasks = activeTasks;
+  const printCompletedTasks = completedTasks;
 
   const isPastDate = isBefore(startOfDay(selectedDate), startOfDay(new Date()));
 
@@ -76,9 +95,7 @@ export default function TodoContainer({ selectedDate }) {
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     
-    // Filter out tasks from other dates (carried-forward)
-    const localDateTasks = todos.filter(t => !parseTaskTitle(t.title).fromOriginalDate);
-    const displayedPDFTodos = filterPriority === 'Default' ? localDateTasks : localDateTasks.filter(t => t.priority === filterPriority);
+    const displayedPDFTodos = filterPriority === 'Default' ? todos : todos.filter(t => t.priority === filterPriority);
     
     const active = displayedPDFTodos.filter(t => !t.completed);
     const completed = displayedPDFTodos.filter(t => t.completed);
@@ -128,8 +145,8 @@ export default function TodoContainer({ selectedDate }) {
       if (task.priority === 'High') pColor = [249, 115, 22]; // Orange
       else if (task.priority === 'Medium') pColor = [234, 179, 8]; // Yellow
 
-      // Prepare text
-      const cleanTitle = parseTaskTitle(task.title).cleanTitle;
+      // Prepare text and strip emojis to avoid garbage text/spacing bugs in Helvetica pdf font
+      const cleanTitle = cleanTextForPDF(parseTaskTitle(task.title).cleanTitle);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       
