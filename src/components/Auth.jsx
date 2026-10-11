@@ -12,9 +12,6 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
-  const dummy_email = import.meta.env.DUMMY_DEMO_ACCOUNT_EMAIL;
-  const dummy_password = import.meta.env.DUMMY_DEMO_ACCOUNT_PASSWORD;
-
   const handleAuth = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -37,7 +34,7 @@ export default function Auth() {
   async function dummyAccountLogin(){
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email : dummy_email, password : dummy_password });
+      const { error } = await supabase.auth.signInWithPassword({ email : "binobanana69@gmail.com", password : "Bino/*-@**1" });
         if (error) throw error;
     } catch (error) {
       alert(error.message);
